@@ -7,7 +7,7 @@
 3. リポジトリの `Settings` → `Pages` を開きます。
 4. `Build and deployment` の Sourceを `Deploy from a branch` にします。
 5. Branchを `main`、フォルダを `/(root)` にして保存します。
-6. 数分後に表示されるURLをスマートフォンで開いて動作確認します。
+6. 数分後に表示されるURLをスマートフォンで開いて動作確認します
 
 ## 注意事項
 
