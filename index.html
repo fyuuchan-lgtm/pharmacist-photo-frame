@@ -15,9 +15,13 @@
     </header>
 
     <section id="cameraScreen" class="screen">
-      <div class="camera-stage" id="cameraStage">
-        <video id="video" autoplay muted playsinline></video>
+      <div class="camera-stage">
+        <div id="cameraWindow" class="camera-window">
+          <video id="video" autoplay muted playsinline></video>
+        </div>
+
         <img id="frame" alt="フォトフレーム">
+
         <div id="flash"></div>
         <div id="certification">
           <div class="sparkles">✨✨✨</div>
@@ -33,6 +37,7 @@
         <button id="shutter" class="shutter" type="button" aria-label="撮影"></button>
         <button id="changeFrame" class="secondary" type="button">フレーム変更</button>
       </div>
+      <p class="camera-mode">現在：<span id="cameraModeText">背面カメラ</span></p>
       <p class="privacy">写真はサーバーへ送信されません。</p>
     </section>
 
@@ -43,7 +48,7 @@
         <button id="retake" class="secondary wide" type="button">撮り直す</button>
         <button id="save" class="primary wide" type="button">写真を保存</button>
       </div>
-      <p class="save-note">iPhoneでは画像が開いたら、長押しまたは共有メニューから保存してください。</p>
+      <p class="save-note">iPhoneでは共有メニューから「画像を保存」を選んでください。</p>
     </section>
 
     <canvas id="captureCanvas" class="hidden"></canvas>
