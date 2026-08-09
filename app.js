@@ -19,15 +19,29 @@ const cameraModeText = document.getElementById('cameraModeText');
 const FRAME_W = 1024;
 const FRAME_H = 1536;
 
+/*
+  IMPORTANT:
+  All four PNGs already use the SAME camera window.
+  Therefore the camera geometry must also be shared by every frame.
+  Do NOT define per-frame window coordinates.
+*/
+const COMMON_WINDOW = {
+  x: 220,
+  y: 315,
+  w: 590,
+  h: 900,
+  r: 42
+};
+
 const normalFrames = [
-  {src:'frames/frame01.png', label:'やくざいしになってみよう！', window:{x:205,y:215,w:645,h:865,r:45}},
-  {src:'frames/frame02.png', label:'おくすりマスター！', window:{x:205,y:385,w:620,h:775,r:40}},
-  {src:'frames/frame03.png', label:'みらいのやくざいし！', window:{x:250,y:370,w:535,h:820,r:42}}
+  {src:'frames/frame01.png', label:'やくざいしになってみよう！'},
+  {src:'frames/frame02.png', label:'おくすりマスター！'},
+  {src:'frames/frame03.png', label:'みらいのやくざいし！'}
 ];
+
 const rareFrame = {
   src:'frames/frame_rare.png',
-  label:'レア！ スーパーやくざいし！',
-  window:{x:265,y:400,w:525,h:715,r:45}
+  label:'レア！ スーパーやくざいし！'
 };
 
 let currentFrame;
@@ -36,7 +50,7 @@ let stream;
 let resultBlob;
 
 function applyWindowGeometry(){
-  const w = currentFrame.window;
+  const w = COMMON_WINDOW;
   cameraWindow.style.setProperty('--x', `${w.x / FRAME_W * 100}%`);
   cameraWindow.style.setProperty('--y', `${w.y / FRAME_H * 100}%`);
   cameraWindow.style.setProperty('--w', `${w.w / FRAME_W * 100}%`);
@@ -48,8 +62,10 @@ function chooseFrame(){
   currentFrame = Math.floor(Math.random()*6) === 0
     ? rareFrame
     : normalFrames[Math.floor(Math.random()*normalFrames.length)];
+
   frameEl.src = currentFrame.src;
   frameLabel.textContent = currentFrame.label;
+  // Same window for every frame
   applyWindowGeometry();
 }
 
@@ -66,18 +82,25 @@ async function startCamera(){
       }
     });
 
+    // Prefer a real rear camera when environment is requested
     if(facingMode === 'environment' && navigator.mediaDevices.enumerateDevices){
       const currentTrack = stream.getVideoTracks()[0];
       const settings = currentTrack.getSettings ? currentTrack.getSettings() : {};
+
       if(settings.facingMode && settings.facingMode !== 'environment'){
         const devices = await navigator.mediaDevices.enumerateDevices();
-        const videoDevices = devices.filter(d=>d.kind==='videoinput');
+        const videoDevices = devices.filter(d => d.kind === 'videoinput');
         const rear = videoDevices.find(d => /back|rear|environment|背面/i.test(d.label));
+
         if(rear){
           stream.getTracks().forEach(t=>t.stop());
           stream = await navigator.mediaDevices.getUserMedia({
             audio:false,
-            video:{deviceId:{exact:rear.deviceId},width:{ideal:1920},height:{ideal:1080}}
+            video:{
+              deviceId:{exact:rear.deviceId},
+              width:{ideal:1920},
+              height:{ideal:1080}
+            }
           });
         }
       }
@@ -85,10 +108,12 @@ async function startCamera(){
 
     video.srcObject = stream;
     video.style.transform = facingMode === 'user' ? 'scaleX(-1)' : 'none';
-    cameraModeText.textContent = facingMode === 'environment' ? '背面カメラ' : '自撮りカメラ';
+    cameraModeText.textContent =
+      facingMode === 'environment' ? '背面カメラ' : '自撮りカメラ';
+
   }catch(err){
     console.error(err);
-    alert('カメラを起動できませんでした。Safariのカメラ許可を確認してください。');
+    alert('カメラを起動できませんでした。ブラウザのカメラ許可を確認してください。');
   }
 }
 
@@ -103,7 +128,7 @@ function drawVideoCover(ctx, source, x, y, w, h, mirror=false){
 
   ctx.save();
   ctx.beginPath();
-  ctx.roundRect(x, y, w, h, 42);
+  ctx.roundRect(x, y, w, h, COMMON_WINDOW.r);
   ctx.clip();
 
   if(mirror){
@@ -123,6 +148,7 @@ function runConfetti(duration=500){
   confettiCanvas.height = rect.height*dpr;
   const ctx = confettiCanvas.getContext('2d');
   ctx.scale(dpr,dpr);
+
   const colors = ['#ef4e72','#ffd23f','#36b5d8','#61c454','#ff8b2d'];
   const pieces = Array.from({length:90},()=>({
     x:Math.random()*rect.width,
@@ -134,12 +160,15 @@ function runConfetti(duration=500){
     vr:(Math.random()-.5)*.3,
     c:colors[Math.floor(Math.random()*colors.length)]
   }));
+
   const start = performance.now();
 
   function tick(now){
     ctx.clearRect(0,0,rect.width,rect.height);
     for(const p of pieces){
-      p.x+=p.vx; p.y+=p.vy; p.r+=p.vr;
+      p.x+=p.vx;
+      p.y+=p.vy;
+      p.r+=p.vr;
       ctx.save();
       ctx.translate(p.x,p.y);
       ctx.rotate(p.r);
@@ -150,6 +179,7 @@ function runConfetti(duration=500){
     if(now-start<duration) requestAnimationFrame(tick);
     else ctx.clearRect(0,0,rect.width,rect.height);
   }
+
   requestAnimationFrame(tick);
 }
 
@@ -157,6 +187,7 @@ async function capture(){
   if(!video.videoWidth) return;
 
   shutter.disabled = true;
+
   flash.classList.add('on');
   setTimeout(()=>flash.classList.remove('on'),180);
 
@@ -170,8 +201,14 @@ async function capture(){
   ctx.fillStyle = '#fff7d8';
   ctx.fillRect(0,0,FRAME_W,FRAME_H);
 
-  const w = currentFrame.window;
-  drawVideoCover(ctx, video, w.x,w.y,w.w,w.h, facingMode === 'user');
+  const w = COMMON_WINDOW;
+
+  drawVideoCover(
+    ctx,
+    video,
+    w.x,w.y,w.w,w.h,
+    facingMode === 'user'
+  );
 
   const img = new Image();
   img.src = currentFrame.src;
@@ -181,9 +218,11 @@ async function capture(){
   await new Promise(r=>setTimeout(r,500));
   certification.classList.remove('show');
 
-  resultBlob = await new Promise(resolve=>captureCanvas.toBlob(resolve,'image/png',1));
-  resultImage.src = URL.createObjectURL(resultBlob);
+  resultBlob = await new Promise(resolve =>
+    captureCanvas.toBlob(resolve,'image/png',1)
+  );
 
+  resultImage.src = URL.createObjectURL(resultBlob);
   cameraScreen.classList.add('hidden');
   resultScreen.classList.remove('hidden');
   shutter.disabled = false;
@@ -225,5 +264,6 @@ retakeBtn.addEventListener('click', ()=>{
   cameraScreen.classList.remove('hidden');
 });
 
+applyWindowGeometry();
 chooseFrame();
 startCamera();
